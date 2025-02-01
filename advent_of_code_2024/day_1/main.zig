@@ -7,4 +7,7 @@ pub fn main() !void {
     try stdout.print("{any}\n", .{array});
     quicksort(&array);
     try stdout.print("{any}\n", .{array});
+
+    const puzzle_input = try std.fs.cwd().openFile("puzzle_input.txt", .{});
+    defer puzzle_input.close();
 }
