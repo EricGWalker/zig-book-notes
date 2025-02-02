@@ -11,7 +11,6 @@
 const std = @import("std");
 const quicksort = @import("quicksort.zig").quicksort;
 const stdout = std.io.getStdOut().writer();
-const dprint = std.debug.print;
 
 const column_length: usize = 1000;
 
@@ -36,14 +35,16 @@ fn loadColumns(column_1: *[column_length]u17, column_2: *[column_length]u17) !vo
     }
 }
 
-fn iterAdd(column_1: *[column_length]u17, column_2: *[column_length]u17) u64 {
+fn iterAdd(column_1: *[column_length]u17, column_2: *[column_length]u17) !u64 {
     var total_distance: u64 = 0;
+
+    try stdout.print("Column1,Column2,Distance,Total", .{});
     for (column_1[0..], column_2[0..]) |col1_value, col2_value| {
         //lazy eric
         const inner_distance: u17 = @max(col1_value, col2_value) - @min(col1_value, col2_value);
         total_distance += @as(u64, inner_distance);
 
-        dprint("col1: {any}, col2: {any}, distance: {any}, total: {any}\n", .{ col1_value, col2_value, inner_distance, total_distance });
+        try stdout.print("{any},{any},{any},{any}\n", .{ col1_value, col2_value, inner_distance, total_distance });
     }
 
     return total_distance;
@@ -61,7 +62,7 @@ pub fn main() !void {
     quicksort(&column_2);
 
     try stdout.print("CALCULATING TOTAL DISTANCE\n", .{});
-    const total_distance: u64 = iterAdd(&column_1, &column_2);
+    const total_distance: u64 = try iterAdd(&column_1, &column_2);
 
     try stdout.print("Total distance is {d}\n", .{total_distance});
 }
