@@ -3,7 +3,7 @@ const std = @import("std");
 //const stdio = std.io.getStdOut().writer();
 const print = std.debug.print;
 
-pub fn quicksort(slice: []u32) void {
+pub fn quicksort(slice: []u17) void {
     if (slice.len <= 1) {
         return;
     }
@@ -15,7 +15,7 @@ pub fn quicksort(slice: []u32) void {
         if (slice[right_pivot] > pivot) {
             continue;
         } else if (slice[right_pivot] <= pivot) {
-            const new_right_pivot: u32 = slice[left_pivot];
+            const new_right_pivot: u17 = slice[left_pivot];
             slice[left_pivot] = slice[right_pivot];
             slice[right_pivot] = new_right_pivot;
             left_pivot += 1;
