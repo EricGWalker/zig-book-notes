@@ -26,13 +26,20 @@ pub fn HashMap(
     comptime rehash_threshold_percent: usize,
 ) !type {
     if (rehash_threshold_percent > 100 or rehash_threshold_percent < 1) {
-        return error.InvalidRehashThresholdPercent;
+        @compileError("rehash_threshold_percent must lie on the range 1...100 (inclusive)");
+    }
+    if (!@hasField(KVPair, "key")) {
+        @compileError("KVPair must have field 'key'");
+    }
+    if (!@hasField(KVPair, "value")) {
+        @compileError("KVPair must have field 'value'");
     }
 
     return struct {
         /// Number of elements in the hashmap;
         var size: usize = 0;
-        var array: []KVPair = allocator.alloc(KVPair, 1);
+        const KVPairList: type = std.SinglyLinkedList(KVPair);
+        var array: []KVPairList = allocator.alloc(KVPairList, 1);
         const Self = @This();
         /// Only way I learned how to get the datatype of the key field
         /// was by asking Claude
@@ -43,7 +50,7 @@ pub fn HashMap(
         ///Free's array from allocator and destroys self
         pub fn deinit(self: *Self) void {
             allocator.free(array);
-            self.* = undefined;
+            self.* = undefined; // stole this from std.heap.GeneralPurposeAllocator's deinit function
         }
         fn exceedsThreshold() bool {
             const threshold: usize = array.len * rehash_threshold_percent / 100;
@@ -57,9 +64,17 @@ pub fn HashMap(
             return index;
         }
         /// insert a new KVPair
+        /// O(N) where N is the number of collisions, so it should be small
         pub fn insert(pair: KVPair) !void {
-            _ = pair;
-            return void;
+            const index: usize = indexOf(pair.key);
+            var iterator: *?KVPair = array[index].first;
+            // looking to see if the key already exists so we can throw a fit.
+            while(iterator) |iterated_node| : (iterator = iterated_node.*) {
+                iterated_node.*.
+            }
+            
+
+
         }
     };
 }
