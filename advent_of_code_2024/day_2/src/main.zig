@@ -1,5 +1,34 @@
 const std = @import("std");
 const stdout = std.io.getStdOut().writer();
+const states = enum {
+    increase_inbounds,
+    decrease_inbounds,
+    increase_outbounds,
+    decrease_outbounds,
+    nochange,
+
+    pub fn checkPair(first: i8, second: i8) states {
+        const diff = second - first;
+        switch (diff) {
+            0 => {
+                return states.nochange;
+            },
+            1...3 => {
+                return states.increase_inbounds;
+            },
+            -3...-1 => {
+                return states.decrease_inbounds;
+            },
+            else => {
+                if (diff > 3) {
+                    return states.increase_outbounds;
+                } else if (diff < -3) {
+                    return states.decrease_outbounds;
+                } else unreachable;
+            },
+        }
+    }
+};
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -13,73 +42,47 @@ pub fn main() !void {
     defer file.close();
 
     var safe_reports: usize = 0;
-    file_reader: while (file.reader().readUntilDelimiterOrEofAlloc(allocator, '\n', std.math.maxInt(usize)) catch |err| {
+    var no_strike_safe_reports: usize = 0;
+    line_reader: while (file.reader().readUntilDelimiterOrEofAlloc(allocator, '\n', std.math.maxInt(usize)) catch |err| {
         std.log.err("Failed to read line: {s}", .{@errorName(err)});
         return;
     }) |line| {
         defer allocator.free(line);
         var iterator = std.mem.splitSequence(u8, line, " ");
-
-        const states = enum { init, increase, decrease };
-        var state = states.init;
-        var previous_value: i8 = 0;
+        // Initialize with first value
+        var previous_value = try std.fmt.parseInt(i8, iterator.next().?, 10);
+        var previous_state: states = states.checkPair(previous_value, try std.fmt.parseInt(i8, iterator.peek().?, 10));
+        var strike: bool = false;
         while (iterator.next()) |digit_str| {
-            std.debug.print("{s} ", .{digit_str});
-            switch (state) {
-                states.init => {
-                    const current_value = try std.fmt.parseInt(i8, digit_str, 10);
-                    const next_value = try std.fmt.parseInt(i8, iterator.next().?, 10);
-                    std.debug.print("{any} ", .{next_value});
-                    const diff = current_value - next_value;
-
-                    switch (diff) {
-                        -3...-1 => {
-                            state = states.decrease;
-                            previous_value = next_value;
-                        },
-                        1...3 => {
-                            state = states.increase;
-                            previous_value = next_value;
-                        },
-                        else => {
-                            std.debug.print(" bad sequence\n", .{});
-                            continue :file_reader;
-                        },
+            const next_value = try std.fmt.parseInt(i8, digit_str, 10);
+            const next_state = states.checkPair(previous_value, next_value);
+            switch (strike) {
+                false => {
+                    strike = (next_state == states.increase_outbounds or
+                        next_state == states.decrease_outbounds or
+                        next_state == states.nochange);
+                    if (previous_state != next_state) {
+                        previous_state = next_state;
+                        strike = true;
                     }
                 },
-                states.increase => {
-                    const next_value = try std.fmt.parseInt(i8, digit_str, 10);
-                    const diff = previous_value - next_value;
-
-                    switch (diff) {
-                        1...3 => {
-                            previous_value = next_value;
+                true => {
+                    switch (previous_state) {
+                        states.increase_outbounds, states.decrease_outbounds, states.nochange => {
+                            continue :line_reader;
                         },
-                        else => {
-                            std.debug.print(" bad sequence\n", .{});
-                            continue :file_reader;
-                        },
-                    }
-                },
-                states.decrease => {
-                    const next_value = try std.fmt.parseInt(i8, digit_str, 10);
-                    const diff = previous_value - next_value;
-
-                    switch (diff) {
-                        -3...-1 => {
-                            previous_value = next_value;
-                        },
-                        else => {
-                            std.debug.print(" bad sequence\n", .{});
-                            continue :file_reader;
-                        },
+                        else => {},
                     }
                 },
             }
+            previous_value = next_value;
+            // This line shouldn't be needed, but I'm leaving it incase I need to uncomment it to get a different answer
+            previous_state = next_state;
         }
-        std.debug.print(" Good Sequence\n", .{});
-        safe_reports += 1;
-    }
 
-    try std.io.getStdOut().writer().print("Total Safe Reports = {any}", .{safe_reports});
+        safe_reports += 1;
+        no_strike_safe_reports += if (strike) 0 else 1;
+    }
+    try std.io.getStdOut().writer().print("Total Safe Reports = {any}\n", .{safe_reports});
+    try std.io.getStdOut().writer().print("Total Safe No Strike Reports = {any}\n", .{no_strike_safe_reports});
 }
