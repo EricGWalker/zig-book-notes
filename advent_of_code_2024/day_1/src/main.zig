@@ -38,13 +38,37 @@ fn loadColumns(column_1: *[column_length]u17, column_2: *[column_length]u17) !vo
 fn iterAdd(column_1: *[column_length]u17, column_2: *[column_length]u17) !u64 {
     var total_distance: u64 = 0;
 
-    try stdout.print("Column1,Column2,Distance,Total", .{});
     for (column_1[0..], column_2[0..]) |col1_value, col2_value| {
         //lazy eric
         const inner_distance: u17 = @max(col1_value, col2_value) - @min(col1_value, col2_value);
         total_distance += @as(u64, inner_distance);
+    }
 
-        try stdout.print("{any},{any},{any},{any}\n", .{ col1_value, col2_value, inner_distance, total_distance });
+    return total_distance;
+}
+
+/// This is the function that solves the advent of code question part 2
+/// This day's code is crude so that I can just move on and start fresh on another project.
+fn similarityScore2(allocator: std.mem.Allocator, column_1: *[column_length]u17, column_2: *[column_length]u17) !u64 {
+    var hashmap = std.AutoHashMap(u17, u64).init(allocator);
+    defer hashmap.deinit();
+
+    // Initialize hashmap with column 1 as keys
+    for (column_1[0..]) |col1_value| {
+        try hashmap.put(col1_value, 0);
+    }
+
+    for (column_2[0..]) |col2_value| {
+        const ptr = hashmap.getPtr(col2_value);
+        if (ptr) |value_ptr| {
+            value_ptr.* = value_ptr.* + 1;
+        }
+    }
+
+    var total_distance: u64 = 0;
+    var iterator = hashmap.iterator();
+    while (iterator.next()) |kvp| {
+        total_distance += kvp.key_ptr.* * kvp.value_ptr.*;
     }
 
     return total_distance;
@@ -64,5 +88,14 @@ pub fn main() !void {
     try stdout.print("CALCULATING TOTAL DISTANCE\n", .{});
     const total_distance: u64 = try iterAdd(&column_1, &column_2);
 
+    try stdout.print("Problem 1:\n", .{});
     try stdout.print("Total distance is {d}\n", .{total_distance});
+
+    try stdout.print("Problem 2:\n", .{});
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer _ = gpa.deinit();
+    const allocator = gpa.allocator();
+
+    const total_distance2 = try similarityScore2(allocator, &column_1, &column_2);
+    try stdout.print("Distance 2 is:\n{any}\n", .{total_distance2});
 }
