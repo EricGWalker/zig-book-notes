@@ -11,10 +11,7 @@ pub fn main() !void {
     var server = try socket._address.listen(.{});
     const connection = try server.accept();
 
-    var buffer: [1000]u8 = undefined;
-    for (0..buffer.len) |i| {
-        buffer[i] = 0;
-    }
+    var buffer: [1000]u8 = [_]u8{0} ** 1000;
     try Request.read_request(connection, buffer[0..buffer.len]);
     const request = Request.parse_request(buffer[0..buffer.len]);
     if (request.method == Method.GET) {
